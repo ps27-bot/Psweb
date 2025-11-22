@@ -1,0 +1,326 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maruti On-Road Calculator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            max-width: 480px;
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: #1565C0;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+        .content {
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box; /* Ensures padding doesn't widen element */
+        }
+        .breakdown {
+            margin-top: 20px;
+            border-top: 2px solid #eee;
+            padding-top: 10px;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f9f9f9;
+        }
+        .row.total-row {
+            font-weight: bold;
+            border-top: 1px solid #ddd;
+            border-bottom: none;
+            margin-top: 10px;
+            padding-top: 15px;
+            font-size: 1.1em;
+        }
+        .final-box {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #2e7d32;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .hidden {
+            display: none;
+        }
+        .currency {
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">Maruti Price Calculator</div>
+    <div class="content">
+        
+        <div class="form-group">
+            <label>Select Model</label>
+            <select id="modelSelect" onchange="onModelChange()">
+                <option value="">-- Choose a Model --</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Select Variant</label>
+            <select id="variantSelect" onchange="calculate()" disabled>
+                <option value="">-- First Choose Model --</option>
+            </select>
+        </div>
+
+        <div id="resultArea" class="hidden">
+            <div class="breakdown">
+                <div class="row"><span>A. Ex-Showroom</span> <span class="currency" id="val_ex"></span></div>
+                <div class="row"><span>B. TCS Amount</span> <span class="currency" id="val_tcs"></span></div>
+                <div class="row"><span>C. Insurance</span> <span class="currency" id="val_ins"></span></div>
+                <div class="row"><span>D. RTO</span> <span class="currency" id="val_rto"></span></div>
+                <div class="row"><span>E. Accessories</span> <span class="currency" id="val_acc"></span></div>
+                <div class="row"><span>F. Fastag</span> <span class="currency" id="val_tag"></span></div>
+                
+                <div class="row total-row">
+                    <span>G. On-Road Total</span> 
+                    <span class="currency" id="val_total"></span>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px; display: flex; align-items: center; justify-content: space-between;">
+                <label style="color: red; margin:0;">H. Discount</label>
+                <input type="number" id="discountInput" placeholder="0" style="width: 150px; text-align: right;" oninput="calculate()">
+            </div>
+
+            <div class="final-box">
+                <span>I. FINAL ON ROAD</span>
+                <span id="val_final">₹ 0</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // --- DATA FROM CSV ---
+    const carData = [
+        {model: "ALTO K10", variant: "ALTO K10 STD 1L 5MT", ex: 369853, tcs: 0, ins: 15963, rto: 32358, acc: 15309, tag: 600},
+        {model: "ALTO K10", variant: "ALTO K10 LXI 1L 5MT", ex: 399852, tcs: 0, ins: 16663, rto: 38757, acc: 15309, tag: 600},
+        {model: "ALTO K10", variant: "ALTO K10 VXI 1L 5MT", ex: 449852, tcs: 0, ins: 17000, rto: 43257, acc: 15309, tag: 600},
+        {model: "ALTO K10", variant: "ALTO K10 VXI+ 1L 5MT", ex: 499852, tcs: 0, ins: 17853, rto: 47757, acc: 15309, tag: 600},
+        {model: "ALTO K10", variant: "ALTO K10 VXI 1L AGS", ex: 494853, tcs: 0, ins: 17763, rto: 47307, acc: 15309, tag: 600},
+        {model: "ALTO K10", variant: "ALTO K10 VXI+ 1L AGS", ex: 544853, tcs: 0, ins: 18620, rto: 51807, acc: 15309, tag: 600},
+        {model: "ALTO K10", variant: "ALTO K10 VXI CNG 1L 5MT", ex: 531853, tcs: 0, ins: 18854, rto: 50637, acc: 15309, tag: 600},
+        {model: "ALTO K10", variant: "ALTO K10 LXI CNG 1L 5MT", ex: 481853, tcs: 0, ins: 17845, rto: 46137, acc: 15309, tag: 600},
+        {model: "ALTO K10", variant: "TOUR H1 1L 5MT", ex: 399852, tcs: 0, ins: 18789, rto: 38757, acc: 15309, tag: 600},
+        {model: "ALTO K10", variant: "TOUR H1 CNG 1L 5MT", ex: 481853, tcs: 0, ins: 19733, rto: 46137, acc: 15309, tag: 600},
+        {model: "CELERIO", variant: "CELERIO LXI 1L ISS 5MT", ex: 469852, tcs: 0, ins: 17514, rto: 45057, acc: 15658, tag: 600},
+        {model: "CELERIO", variant: "CELERIO VXI 1L ISS 5MT", ex: 515852, tcs: 0, ins: 18124, rto: 49197, acc: 15658, tag: 600},
+        {model: "CELERIO", variant: "CELERIO ZXI 1L ISS 5MT", ex: 570852, tcs: 0, ins: 19063, rto: 54147, acc: 15658, tag: 600},
+        {model: "CELERIO", variant: "CELERIO ZXI+ 1L ISS 5MT", ex: 627852, tcs: 0, ins: 20035, rto: 59277, acc: 15658, tag: 600},
+        {model: "CELERIO", variant: "CELERIO VXI 1L ISS AGS", ex: 560853, tcs: 0, ins: 18893, rto: 53247, acc: 15658, tag: 600},
+        {model: "CELERIO", variant: "CELERIO ZXI 1L ISS AGS", ex: 615853, tcs: 0, ins: 19830, rto: 58197, acc: 15658, tag: 600},
+        {model: "CELERIO", variant: "CELERIO ZXI+ 1L ISS AGS", ex: 672853, tcs: 0, ins: 20800, rto: 63327, acc: 15658, tag: 600},
+        {model: "CELERIO", variant: "CELERIO VXI CNG 1L 5MT", ex: 597853, tcs: 0, ins: 20009, rto: 56577, acc: 15658, tag: 600},
+        {model: "S-PRESSO", variant: "S-PRESSO STD (O) 1L ISS 5MT", ex: 349853, tcs: 0, ins: 15308, rto: 30758, acc: 13339, tag: 600},
+        {model: "S-PRESSO", variant: "S-PRESSO LXI (O) 1L ISS 5MT", ex: 379852, tcs: 0, ins: 15808, rto: 36957, acc: 13339, tag: 600},
+        {model: "S-PRESSO", variant: "S-PRESSO VXI (O) 1L ISS 5MT", ex: 429852, tcs: 0, ins: 16660, rto: 41457, acc: 13339, tag: 600},
+        {model: "S-PRESSO", variant: "S-PRESSO VXI+ (O) 1L ISS 5MT", ex: 479852, tcs: 0, ins: 17512, rto: 45957, acc: 13339, tag: 600},
+        {model: "S-PRESSO", variant: "S-PRESSO VXI (O) 1L ISS AGS", ex: 474853, tcs: 0, ins: 17426, rto: 45507, acc: 13339, tag: 600},
+        {model: "S-PRESSO", variant: "S-PRESSO VXI+ (O) 1L ISS AGS", ex: 524853, tcs: 0, ins: 18281, rto: 50007, acc: 13339, tag: 600},
+        {model: "S-PRESSO", variant: "S-PRESSO LXI (O) CNG 1L 5MT", ex: 461853, tcs: 0, ins: 17632, rto: 44337, acc: 13339, tag: 600},
+        {model: "S-PRESSO", variant: "S-PRESSO VXI (O) CNG 1L 5MT", ex: 511853, tcs: 0, ins: 18505, rto: 48837, acc: 13339, tag: 600},
+        {model: "WAGONR", variant: "WAGON R LXI 1L ISS 5MT", ex: 498853, tcs: 0, ins: 17837, rto: 47667, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "WAGON R VXI 1L ISS 5MT", ex: 551853, tcs: 0, ins: 18737, rto: 52437, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "WAGON R ZXI 1.2L ISS 5MT", ex: 595852, tcs: 0, ins: 24615, rto: 56397, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "WAGON R ZXI+ 1.2L ISS 5MT", ex: 638853, tcs: 0, ins: 25638, rto: 60267, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "WAGON R ZXI+ 1.2L ISS 5MT", ex: 649853, tcs: 0, ins: 25560, rto: 61257, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "WAGON R VXI 1L ISS AGS", ex: 596853, tcs: 0, ins: 19507, rto: 56487, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "WAGON R ZXI 1.2L ISS AGS", ex: 640853, tcs: 0, ins: 25404, rto: 60447, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "WAGON R ZXI+ 1.2L ISS AGS", ex: 683852, tcs: 0, ins: 26157, rto: 64317, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "WAGON R ZXI+ 1.2L ISS AGS", ex: 694852, tcs: 0, ins: 26348, rto: 65307, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "WAGON R LXI CNG 1L 5MT", ex: 588853, tcs: 0, ins: 19854, rto: 55767, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "WAGON R VXI CNG 1L 5MT", ex: 641852, tcs: 0, ins: 20781, rto: 60537, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "TOUR H3 1L ISS 5MT", ex: 498853, tcs: 0, ins: 22660, rto: 47667, acc: 16546, tag: 600},
+        {model: "WAGONR", variant: "TOUR H3 CNG 1L 5MT", ex: 588853, tcs: 0, ins: 23460, rto: 55767, acc: 16546, tag: 600},
+        {model: "SWIFT", variant: "SWIFT VXI 1.2L ISS AGS", ex: 703852, tcs: 0, ins: 28715, rto: 66117, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT VXI (O) 1.2L ISS AGS", ex: 729852, tcs: 0, ins: 29251, rto: 68457, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT ZXI 1.2L ISS AGS", ex: 797852, tcs: 0, ins: 30653, rto: 74577, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT ZXI+ 1.2L ISS AGS", ex: 879853, tcs: 0, ins: 32346, rto: 81957, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT ZXI+ 1.2L ISS AGS", ex: 864853, tcs: 0, ins: 32032, rto: 80607, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT LXI 1.2L ISS 5MT", ex: 578853, tcs: 0, ins: 26137, rto: 54867, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT VXI 1.2L ISS 5MT", ex: 658853, tcs: 0, ins: 27787, rto: 62067, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT VXI (O) 1.2L ISS 5MT", ex: 684852, tcs: 0, ins: 28249, rto: 64407, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT ZXI 1.2L ISS 5MT", ex: 752853, tcs: 0, ins: 30051, rto: 70527, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT ZXI+ 1.2L ISS 5MT", ex: 834852, tcs: 0, ins: 31416, rto: 77907, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT ZXI+ 1.2L ISS 5MT", ex: 819852, tcs: 0, ins: 31107, rto: 76557, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT VXI CNG 1.2L 5MT", ex: 744853, tcs: 0, ins: 30252, rto: 69807, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT VXI (O) CNG 1.2L 5MT", ex: 770853, tcs: 0, ins: 30806, rto: 72147, acc: 20035, tag: 600},
+        {model: "SWIFT", variant: "SWIFT ZXI CNG 1.2L 5MT", ex: 838853, tcs: 0, ins: 32252, rto: 78267, acc: 20035, tag: 600},
+        {model: "DZIRE", variant: "DZIRE VXI 1.2L ISS AGS", ex: 762052, tcs: 0, ins: 27524, rto: 71355, acc: 23314, tag: 600},
+        {model: "DZIRE", variant: "DZIRE ZXI 1.2L ISS AGS", ex: 862652, tcs: 0, ins: 29283, rto: 80409, acc: 23314, tag: 600},
+        {model: "DZIRE", variant: "DZIRE ZXI+ 1.2L ISS AGS", ex: 931253, tcs: 0, ins: 30482, rto: 86583, acc: 23314, tag: 600},
+        {model: "DZIRE", variant: "DZIRE LXI 1.2L ISS 5MT", ex: 625553, tcs: 0, ins: 25134, rto: 59070, acc: 23314, tag: 600},
+        {model: "DZIRE", variant: "DZIRE VXI 1.2L ISS 5MT", ex: 717053, tcs: 0, ins: 26735, rto: 67305, acc: 23314, tag: 600},
+        {model: "DZIRE", variant: "DZIRE ZXI 1.2L ISS 5MT", ex: 817652, tcs: 0, ins: 28496, rto: 76359, acc: 23314, tag: 600},
+        {model: "DZIRE", variant: "DZIRE ZXI+ 1.2L ISS 5MT", ex: 886252, tcs: 0, ins: 29696, rto: 82533, acc: 23314, tag: 600},
+        {model: "DZIRE", variant: "DZIRE VXI CNG 1.2L 5MT", ex: 803053, tcs: 0, ins: 28840, rto: 75045, acc: 23314, tag: 600},
+        {model: "DZIRE", variant: "DZIRE ZXI CNG 1.2L 5MT", ex: 903653, tcs: 0, ins: 30649, rto: 84099, acc: 23314, tag: 600},
+        {model: "BREZZA", variant: "BREZZA LXI 1.5L 5MT", ex: 825844, tcs: 0, ins: 30944, rto: 77096, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA VXI 1.5L 5MT", ex: 925844, tcs: 0, ins: 32972, rto: 86096, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA SMART HYBRID ZXI 1.5L 5MT", ex: 1039843, tcs: 10398, ins: 35282, rto: 117153, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA SMART HYBRID ZXI+ 1.5L 5MT", ex: 1150843, tcs: 11508, ins: 37533, rto: 129363, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA SMART HYBRID VXI 1.5L 6AT", ex: 1059843, tcs: 10598, ins: 35689, rto: 119353, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA SMART HYBRID ZXI 1.5L 6AT", ex: 1174844, tcs: 11748, ins: 38031, rto: 132003, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA SMART HYBRID ZXI+ 1.5L 6AT", ex: 1285844, tcs: 12858, ins: 40270, rto: 144213, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA LXI CNG 1.5L 5MT", ex: 916844, tcs: 0, ins: 33575, rto: 85286, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA VXI CNG 1.5L 5MT", ex: 1016844, tcs: 10168, ins: 35663, rto: 114623, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA ZXI CNG 1.5L 5MT", ex: 1130843, tcs: 11308, ins: 38048, rto: 127163, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA SMART HYBRID ZXI 1.5L 5MT", ex: 1055243, tcs: 10552, ins: 35595, rto: 118847, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA SMART HYBRID ZXI+ 1.5L 5MT", ex: 1166243, tcs: 11662, ins: 37846, rto: 131057, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA SMART HYBRID ZXI 1.5L 6AT", ex: 1190244, tcs: 11902, ins: 38333, rto: 133697, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA SMART HYBRID ZXI+ 1.5L 6AT", ex: 1301244, tcs: 13012, ins: 40584, rto: 145907, acc: 21628, tag: 600},
+        {model: "BREZZA", variant: "BREZZA ZXI CNG 1.5L 5MT", ex: 1146243, tcs: 11462, ins: 38369, rto: 128857, acc: 21628, tag: 600},
+        {model: "ERTIGA", variant: "ERTIGA SMART HYBRID VXI 1.5L 6AT", ex: 1120244, tcs: 11202, ins: 38475, rto: 125997, acc: 29589, tag: 600},
+        {model: "ERTIGA", variant: "ERTIGA SMART HYBRID ZXI 1.5L 6AT", ex: 1226443, tcs: 12264, ins: 40776, rto: 137679, acc: 29589, tag: 600},
+        {model: "ERTIGA", variant: "ERTIGA SMART HYBRID ZXI+ 1.5L 6AT", ex: 1294044, tcs: 12940, ins: 42242, rto: 145115, acc: 29589, tag: 600},
+        {model: "ERTIGA", variant: "ERTIGA SMART HYBRID LXI 1.5L 5MT", ex: 879943, tcs: 0, ins: 33268, rto: 81965, acc: 29589, tag: 600},
+        {model: "ERTIGA", variant: "TOUR M 1.5L 5MT", ex: 982344, tcs: 0, ins: 35301, rto: 91181, acc: 29589, tag: 600},
+        {model: "ERTIGA", variant: "ERTIGA SMART HYBRID VXI 1.5L 5MT", ex: 985243, tcs: 0, ins: 35550, rto: 91442, acc: 29589, tag: 600},
+        {model: "ERTIGA", variant: "ERTIGA SMART HYBRID ZXI 1.5L 5MT", ex: 1091444, tcs: 10914, ins: 37851, rto: 122829, acc: 29589, tag: 600},
+        {model: "ERTIGA", variant: "ERTIGA SMART HYBRID ZXI+ 1.5L 5MT", ex: 1159043, tcs: 11590, ins: 39316, rto: 130265, acc: 29589, tag: 600},
+        {model: "ERTIGA", variant: "TOUR M CNG 1.5L 5MT", ex: 1073344, tcs: 10733, ins: 36001, rto: 120838, acc: 29589, tag: 600},
+        {model: "ERTIGA", variant: "ERTIGA VXI CNG 1.5L 5MT", ex: 1076243, tcs: 10762, ins: 38485, rto: 121157, acc: 29589, tag: 600},
+        {model: "ERTIGA", variant: "ERTIGA ZXI CNG 1.5L 5MT", ex: 1182444, tcs: 11824, ins: 40860, rto: 132839, acc: 29589, tag: 600},
+        {model: "EECO", variant: "EECO AMBULANCE SHELL 1.2L 5MT", ex: 637053, tcs: 0, ins: 13500, rto: 27000, acc: 13239, tag: 600},
+        {model: "EECO", variant: "EECO AMBULANCE 1.2L 5MT", ex: 801453, tcs: 0, ins: 14500, rto: 27000, acc: 13239, tag: 600},
+        {model: "EECO", variant: "EECO 5 STR AC CNG 1.2L 5MT", ex: 635752, tcs: 0, ins: 25377, rto: 59988, acc: 13239, tag: 600},
+        {model: "EECO", variant: "EECO 5 STR AC 1.2L 5MT", ex: 553753, tcs: 0, ins: 24377, rto: 52608, acc: 13239, tag: 600},
+        {model: "EECO", variant: "EECO 5 STR STD 1.2L 5MT", ex: 520852, tcs: 0, ins: 23029, rto: 44438, acc: 13239, tag: 600},
+        {model: "EECO", variant: "EECO 6 STR STD 1.2L 5MT", ex: 547353, tcs: 0, ins: 23829, rto: 46558, acc: 13239, tag: 600},
+        {model: "EECO", variant: "TOUR V 5 STR AC CNG 1.2L 5MT", ex: 633053, tcs: 0, ins: 26895, rto: 27000, acc: 13239, tag: 600},
+        {model: "EECO", variant: "TOUR V 5 STR AC 1.2L 5MT", ex: 551052, tcs: 0, ins: 26095, rto: 27000, acc: 13239, tag: 600},
+        {model: "EECO", variant: "TOUR V 5 STR STD 1.2L 5MT", ex: 518052, tcs: 0, ins: 25395, rto: 27000, acc: 13239, tag: 600},
+        {model: "EECO", variant: "TOUR V 6 STR STD 1.2L 5MT", ex: 545552, tcs: 0, ins: 26295, rto: 27000, acc: 13239, tag: 600},
+        {model: "EECO", variant: "EECO CARGO AC CNG 1.2L 5MT", ex: 660452, tcs: 0, ins: 24984, rto: 27000, acc: 13239, tag: 600},
+        {model: "EECO", variant: "EECO CARGO CNG 1.2L 5MT", ex: 620752, tcs: 0, ins: 24384, rto: 27000, acc: 13239, tag: 600},
+        {model: "EECO", variant: "EECO CARGO 1.2L 5MT", ex: 538753, tcs: 0, ins: 23584, rto: 27000, acc: 13239, tag: 600},
+        {model: "TOUR S", variant: "TOUR S 1.2L ISS 5MT", ex: 623752, tcs: 0, ins: 26118, rto: 27000, acc: 19671, tag: 600},
+        {model: "TOUR S", variant: "TOUR S CNG 1.2L 5MT", ex: 709752, tcs: 0, ins: 26918, rto: 27000, acc: 19671, tag: 600}
+    ];
+
+    const modelSelect = document.getElementById("modelSelect");
+    const variantSelect = document.getElementById("variantSelect");
+    const resultArea = document.getElementById("resultArea");
+    const discountInput = document.getElementById("discountInput");
+
+    const formatter = new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    });
+
+    // Populate Models
+    const models = [...new Set(carData.map(item => item.model))];
+    models.forEach(model => {
+        const option = document.createElement("option");
+        option.value = model;
+        option.text = model;
+        modelSelect.appendChild(option);
+    });
+
+    function onModelChange() {
+        const selectedModel = modelSelect.value;
+        variantSelect.innerHTML = '<option value="">-- Choose a Variant --</option>';
+        resultArea.classList.add("hidden");
+        discountInput.value = "";
+        
+        if (!selectedModel) {
+            variantSelect.disabled = true;
+            return;
+        }
+
+        variantSelect.disabled = false;
+        const variants = carData.filter(c => c.model === selectedModel);
+        variants.forEach((car, index) => {
+            const option = document.createElement("option");
+            // We store the original index to quickly find the car later
+            // Since filtering creates a new array, we need to find the original object or store data.
+            // Easier way: store the variant name as value
+            option.value = car.variant;
+            option.text = car.variant;
+            variantSelect.appendChild(option);
+        });
+    }
+
+    function calculate() {
+        const selectedVariantName = variantSelect.value;
+        if (!selectedVariantName) {
+            resultArea.classList.add("hidden");
+            return;
+        }
+
+        const car = carData.find(c => c.variant === selectedVariantName);
+        if (!car) return;
+
+        // Show results
+        resultArea.classList.remove("hidden");
+
+        // Set individual values
+        document.getElementById("val_ex").innerText = formatter.format(car.ex);
+        document.getElementById("val_tcs").innerText = formatter.format(car.tcs);
+        document.getElementById("val_ins").innerText = formatter.format(car.ins);
+        document.getElementById("val_rto").innerText = formatter.format(car.rto);
+        document.getElementById("val_acc").innerText = formatter.format(car.acc);
+        document.getElementById("val_tag").innerText = formatter.format(car.tag);
+
+        const onRoadTotal = car.ex + car.tcs + car.ins + car.rto + car.acc + car.tag;
+        document.getElementById("val_total").innerText = formatter.format(onRoadTotal);
+
+        // Handle Discount
+        const discount = parseFloat(discountInput.value) || 0;
+        const finalPrice = onRoadTotal - discount;
+        
+        document.getElementById("val_final").innerText = formatter.format(finalPrice);
+    }
+</script>
+
+</body>
+</html>
